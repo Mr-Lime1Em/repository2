@@ -26,7 +26,7 @@ public class ProductEntity {
     private String category;
     private String description;
     private Double price;
-    private Double rating;
+    private Integer rating;
     private String imgUrl;
     private Long ownerId;
 }
