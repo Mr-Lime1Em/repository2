@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,17 +17,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.Shop.entity.ProductEntity;
+import com.example.Shop.request.ProductRequest;
 import com.example.Shop.service.ProductService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/products")
+@CrossOrigin("*")
 public class ProductController {
 
     @Autowired
     private ProductService productService;
 
-    @GetMapping
+    @GetMapping("/my-cars")
     public List<ProductEntity> getAllProducts() {
+        return productService.getMyProducts();
+    }
+    
+    @GetMapping
+    public List<ProductEntity> getMyProducts() {
         return productService.getAllProducts();
     }
 
@@ -40,11 +51,13 @@ public class ProductController {
     }
 
     @PostMapping("/add")
-    public void addProduct(@RequestBody ProductEntity carEntity) {
-        productService.addProduct(carEntity);
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public void addProduct(@RequestBody @Valid ProductRequest carEntity) {
+        productService.addProductForCurrentUser(carEntity);
     }
 
     @DeleteMapping("delete/{id}")
+    @PreAuthorize("hasRole('ROLE_USER')")
     public void deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
     }
@@ -65,7 +78,8 @@ public class ProductController {
     }
     
     @PutMapping("/update/{id}")
-    public void updateCar(@PathVariable Long id, @RequestBody ProductEntity car) {
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public void updateCar(@PathVariable Long id, @RequestBody @Valid ProductEntity car) {
         productService.uptadeCar(id, car);
     }
 }

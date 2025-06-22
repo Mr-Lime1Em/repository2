@@ -7,7 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.Shop.entity.ProductEntity;
+import com.example.Shop.entity.UserEntity;
+import com.example.Shop.jwt.SecurityUtil;
 import com.example.Shop.repository.ProductRepository;
+import com.example.Shop.repository.UserRepository;
+import com.example.Shop.request.ProductRequest;
 
 @Service
 public class ProductService {
@@ -15,12 +19,44 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
-    public void addProduct(ProductEntity product) {
-        productRepository.save(product);
+    @Autowired
+    private UserRepository userRepository;
+
+    public void addProductForCurrentUser(ProductRequest productRequest) {
+        String username = SecurityUtil.getCurrentUsername();
+        UserEntity userEntity = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException());
+        ProductEntity productEntity = new ProductEntity();
+        productEntity.setBrand(productRequest.getBrand());
+        productEntity.setType(productRequest.getType());
+        productEntity.setCategory(productRequest.getCategory());
+        productEntity.setDescription(productRequest.getDescription());
+        productEntity.setPrice(productRequest.getPrice());
+        productEntity.setImgUrl(productRequest.getImgUrl());
+        productEntity.setRating(productRequest.getRating());
+        productEntity.setOwnerId(userEntity.getId());
+        productRepository.save(productEntity);
+    }
+    
+    public List<ProductEntity> getMyProducts() {
+        String username = SecurityUtil.getCurrentUsername();
+        UserEntity userEntity = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException());
+        return productRepository.findByOwnerId(userEntity.getId());
     }
 
+    public ProductEntity getMyProductById(Long id) {
+        String username = SecurityUtil.getCurrentUsername();
+        ProductEntity productEntity = productRepository.findById(id).orElseThrow(() -> new RuntimeException());
+        Long currentUserId = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException()).getId();
+
+        if (!productEntity.getOwnerId().equals(currentUserId)) {
+            throw new RuntimeException("");
+        }
+        return productEntity;
+    }
+    
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+    	ProductEntity productEntity = getMyProductById(id);
+        productRepository.delete(productEntity);
     }
 
     public List<ProductEntity> getAllProducts() {
@@ -48,7 +84,9 @@ public class ProductService {
     }
     
     public void uptadeCar(Long id, ProductEntity productEntity) {
-        Optional<ProductEntity> oldCar = productRepository.findById(id);
+    	String username = SecurityUtil.getCurrentUsername();
+        UserEntity userEntity = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException());
+        Optional<ProductEntity> oldCar = Optional.ofNullable(getMyProductById(id));
         if (oldCar.isPresent()) {
             ProductEntity car = oldCar.get();
             car.setBrand(productEntity.getBrand());
@@ -58,7 +96,7 @@ public class ProductService {
             car.setPrice(productEntity.getPrice());
             car.setImgUrl(productEntity.getImgUrl());
             car.setRating(productEntity.getRating());
-            car.setOwnerId(productEntity.getOwnerId());
+            car.setOwnerId(userEntity.getId());
             productRepository.save(car);
         }
     }
